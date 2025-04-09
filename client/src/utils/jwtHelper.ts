@@ -1,12 +1,15 @@
-import { AuthState } from "../context/AuthContextDefinition";
-import jwt_decode from "jwt-decode";
+// src/utils/jwtHelper.ts
 
-export function getToken(token: string): AuthState {
-  const decoded = jwt_decode<Partial<AuthState>>(token);
-  return {
-    userId: decoded.userId!,
-    email: decoded.email!,
-    role: decoded.role!,
-    token: token, // store the raw token string
-  };
+import * as jwtDecode from "jwt-decode"; // ✅ Use wildcard import for compatibility
+
+export interface DecodedToken {
+  id: number;
+  email: string;
+  role: string;
+  exp: number;
+  // add more fields if your token contains them
 }
+
+export const getToken = (token: string): DecodedToken => {
+  return jwtDecode.default(token) as DecodedToken; // ✅ Call .default on module
+};

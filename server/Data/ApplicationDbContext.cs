@@ -34,7 +34,7 @@ namespace GaLaXiBackend.Data
 
             // Define foreign key relationship: Booking.UserId → Users.Id
             modelBuilder.Entity<Booking>()
-                .HasOne<User>()  // A booking belongs to a user
+                .HasOne(b => b.User)  // A booking belongs to a user
                 .WithMany()  // A user can have multiple bookings
                 .HasForeignKey(b => b.UserId)  // Foreign key in Bookings table
                 .OnDelete(DeleteBehavior.Cascade);  // If a user is deleted, delete their bookings too

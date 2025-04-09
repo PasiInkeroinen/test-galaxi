@@ -11,6 +11,8 @@ namespace GaLaXiBackend.Models
         [Required]
         public int UserId { get; set; } // The user who made the booking
 
+        public User User { get; set; } = null!;
+
         [Required]
         public required string Description { get; set; } // Booking details
 

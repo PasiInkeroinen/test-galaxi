@@ -1,66 +1,76 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using GaLaXiBackend.Data;
-using GaLaXiBackend.Models.Dtos;
+using GaLaXiBackend.Models;
+using Microsoft.AspNetCore.Authorization;
 
-namespace GaLaXiBackend.Controllers
+namespace GaLaXiBackend.Controllers.Admin
 {
-    [Route("api/bookings")]
+    [Route("api/admin/bookings")]
     [ApiController]
     //[Authorize(Roles = "admin")]
-    public class AdminBookingController : ControllerBase
+    public class AdminBookingsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
 
-        public AdminBookingController(ApplicationDbContext context)
+        public AdminBookingsController(ApplicationDbContext context)
         {
             _context = context;
         }
 
+        // GET: /api/admin/bookings
+        // Supports filtering and pagination
         [HttpGet]
-        public IActionResult GetAllBookings()
+        public IActionResult GetBookings(
+            [FromQuery] int? userId,
+            [FromQuery] int? computerId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
-            var bookings = _context.Bookings
-                .Select(b => new BookingResponseDto
-                {
-                    Id = b.Id,
-                    Description = b.Description,
-                    StartTime = b.StartTime,
-                    EndTime = b.EndTime,
-                    ComputerId = b.ComputerId,
-                    IsRoomBooking = b.IsRoomBooking,
-                    RoomBookingType = b.RoomBookingType
-                })
+            var query = _context.Bookings
+                .Include(b => b.User)
+                .AsQueryable();
+
+            if (userId.HasValue)
+            {
+                query = query.Where(b => b.UserId == userId.Value);
+            }
+
+            if (computerId.HasValue)
+            {
+                query = query.Where(b => b.ComputerId == computerId.Value);
+            }
+
+            var totalCount = query.Count();
+
+            var bookings = query
+                .OrderByDescending(b => b.StartTime)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToList();
 
-            return Ok(bookings);
+            return Ok(new
+            {
+                total = totalCount,
+                page,
+                pageSize,
+                items = bookings
+            });
         }
 
-        [HttpPut("{id}")]
-        public IActionResult UpdateBooking(int id, [FromBody] UpdateBookingDto dto)
-        {
-            var booking = _context.Bookings.FirstOrDefault(b => b.Id == id);
-            if (booking == null) return NotFound("Booking not found.");
-
-            booking.Description = dto.Description;
-            booking.StartTime = dto.StartTime;
-            booking.EndTime = dto.EndTime;
-            booking.ComputerId = dto.ComputerId;
-            booking.IsRoomBooking = dto.IsRoomBooking;
-            booking.RoomBookingType = dto.RoomBookingType;
-
-            _context.SaveChanges();
-            return Ok("Booking updated successfully.");
-        }
-
+        // DELETE: /api/admin/bookings/{id}
         [HttpDelete("{id}")]
         public IActionResult DeleteBooking(int id)
         {
-            var booking = _context.Bookings.FirstOrDefault(b => b.Id == id);
-            if (booking == null) return NotFound("Booking not found.");
+            var booking = _context.Bookings.Find(id);
+            if (booking == null)
+            {
+                return NotFound("Booking not found.");
+            }
 
             _context.Bookings.Remove(booking);
             _context.SaveChanges();
+
             return Ok("Booking deleted successfully.");
         }
     }

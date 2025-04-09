@@ -1,8 +1,7 @@
 import { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/context/AuthContext";
-import { attachTokenInterceptor } from "@/api/axios";
+import { Routes, Route } from "react-router-dom";
 import { useAuth } from "@/context/useAuth";
+import { attachTokenInterceptor } from "@/api/axios";
 
 import Layout from "./Layout";
 import CreateBooking from "./pages/book/CreateBooking";
@@ -38,12 +37,4 @@ function AppRoutes() {
   );
 }
 
-export default function App() {
-  return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
-  );
-}
+export default AppRoutes;
