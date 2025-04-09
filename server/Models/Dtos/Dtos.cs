@@ -2,7 +2,7 @@
 {
     public class UserResponseDto
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public required string Email { get; set; }
         public required string Username { get; set; }
         public required string Role { get; set; }
@@ -17,7 +17,7 @@
 
     public class BookingResponseDto
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public required string Description { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
@@ -34,6 +34,8 @@
         public int? ComputerId { get; set; }
         public bool IsRoomBooking { get; set; }
         public string? RoomBookingType { get; set; }
+
+        public int UserId { get; set; }  // Added
     }
 
     public class UpdateBookingDto
@@ -48,8 +50,7 @@
 
     public class UserWithBookingsDto
     {
-        public required UserResponseDto User { get; set; }  // ✅ Correct type
+        public required UserResponseDto User { get; set; }
         public required List<BookingResponseDto> Bookings { get; set; }
     }
-
 }

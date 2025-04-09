@@ -6,7 +6,7 @@ namespace GaLaXiBackend.Models
     public class User
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid(); // Unique identifier for the user
+        public int Id { get; set; } // Changed from Guid to int
 
         [Required, EmailAddress]
         public required string Email { get; set; } // User's email address

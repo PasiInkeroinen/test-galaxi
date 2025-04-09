@@ -1,14 +1,14 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using GaLaXiBackend.Data;
 using GaLaXiBackend.Models;
 using GaLaXiBackend.Models.Dtos;
+using Microsoft.AspNetCore.Authorization;
 
 namespace GaLaXiBackend.Controllers
 {
     [Route("api/users")]
     [ApiController]
-    [Authorize(Roles = "admin")]
+    //[Authorize(Roles = "admin")]
     public class AdminUsersController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -18,53 +18,44 @@ namespace GaLaXiBackend.Controllers
             _context = context;
         }
 
-        // GET: /api/users
         [HttpGet]
         public IActionResult GetAllUsers()
         {
-            var users = _context.Users
-                .Select(u => new UserResponseDto
-                {
-                    Id = u.Id,
-                    Email = u.Email,
-                    Username = u.Username,
-                    Role = u.Role,
-                    CreatedAt = u.CreatedAt
-                })
-                .ToList();
+            var users = _context.Users.Select(u => new UserResponseDto
+            {
+                Id = u.Id,
+                Email = u.Email,
+                Username = u.Username,
+                Role = u.Role,
+                CreatedAt = u.CreatedAt
+            }).ToList();
 
             return Ok(users);
         }
 
-        // GET: /api/users/{id}
         [HttpGet("{id}")]
-        public IActionResult GetUserById(Guid id)
-        {
-            var user = _context.Users
-                .Where(u => u.Id == id)
-                .Select(u => new UserResponseDto
-                {
-                    Id = u.Id,
-                    Email = u.Email,
-                    Username = u.Username,
-                    Role = u.Role,
-                    CreatedAt = u.CreatedAt
-                })
-                .FirstOrDefault();
-
-            if (user == null)
-                return NotFound("User not found.");
-
-            return Ok(user);
-        }
-
-        // GET: /api/users/{id}/bookings
-        [HttpGet("{id}/bookings")]
-        public IActionResult GetUserWithBookings(Guid id)
+        public IActionResult GetUserById(int id)
         {
             var user = _context.Users.FirstOrDefault(u => u.Id == id);
-            if (user == null)
-                return NotFound("User not found.");
+            if (user == null) return NotFound("User not found.");
+
+            var result = new UserResponseDto
+            {
+                Id = user.Id,
+                Email = user.Email,
+                Username = user.Username,
+                Role = user.Role,
+                CreatedAt = user.CreatedAt
+            };
+
+            return Ok(result);
+        }
+
+        [HttpGet("{id}/bookings")]
+        public IActionResult GetUserWithBookings(int id)
+        {
+            var user = _context.Users.FirstOrDefault(u => u.Id == id);
+            if (user == null) return NotFound("User not found.");
 
             var bookings = _context.Bookings
                 .Where(b => b.UserId == id)
@@ -77,8 +68,7 @@ namespace GaLaXiBackend.Controllers
                     ComputerId = b.ComputerId,
                     IsRoomBooking = b.IsRoomBooking,
                     RoomBookingType = b.RoomBookingType
-                })
-                .ToList();
+                }).ToList();
 
             var result = new UserWithBookingsDto
             {
@@ -96,13 +86,11 @@ namespace GaLaXiBackend.Controllers
             return Ok(result);
         }
 
-        // PUT: /api/users/{id}
         [HttpPut("{id}")]
-        public IActionResult UpdateUser(Guid id, [FromBody] UpdateUserDto dto)
+        public IActionResult UpdateUser(int id, [FromBody] UpdateUserDto dto)
         {
             var user = _context.Users.FirstOrDefault(u => u.Id == id);
-            if (user == null)
-                return NotFound("User not found.");
+            if (user == null) return NotFound("User not found.");
 
             user.Username = dto.Username;
             user.Role = dto.Role;
@@ -111,13 +99,11 @@ namespace GaLaXiBackend.Controllers
             return Ok("User updated successfully.");
         }
 
-        // DELETE: /api/users/{id}
         [HttpDelete("{id}")]
-        public IActionResult DeleteUser(Guid id)
+        public IActionResult DeleteUser(int id)
         {
             var user = _context.Users.FirstOrDefault(u => u.Id == id);
-            if (user == null)
-                return NotFound("User not found.");
+            if (user == null) return NotFound("User not found.");
 
             _context.Users.Remove(user);
             _context.SaveChanges();

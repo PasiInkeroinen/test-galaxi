@@ -6,10 +6,10 @@ namespace GaLaXiBackend.Models
     public class Booking
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid(); // Unique identifier for the booking
+        public int Id { get; set; } // Unique identifier for the booking
 
         [Required]
-        public Guid UserId { get; set; } // The user who made the booking
+        public int UserId { get; set; } // The user who made the booking
 
         [Required]
         public required string Description { get; set; } // Booking details

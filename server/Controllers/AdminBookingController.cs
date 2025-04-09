@@ -1,67 +1,63 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GaLaXiBackend.Data;
-using GaLaXiBackend.Models;
+using GaLaXiBackend.Models.Dtos;
 
 namespace GaLaXiBackend.Controllers
 {
     [Route("api/bookings")]
     [ApiController]
-    [Authorize(Roles = "admin")]
-    public class AdminBookingsController : ControllerBase
+    //[Authorize(Roles = "admin")]
+    public class AdminBookingController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
 
-        public AdminBookingsController(ApplicationDbContext context)
+        public AdminBookingController(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        // GET: /api/bookings
         [HttpGet]
         public IActionResult GetAllBookings()
         {
-            var bookings = _context.Bookings.ToList();
+            var bookings = _context.Bookings
+                .Select(b => new BookingResponseDto
+                {
+                    Id = b.Id,
+                    Description = b.Description,
+                    StartTime = b.StartTime,
+                    EndTime = b.EndTime,
+                    ComputerId = b.ComputerId,
+                    IsRoomBooking = b.IsRoomBooking,
+                    RoomBookingType = b.RoomBookingType
+                })
+                .ToList();
+
             return Ok(bookings);
         }
 
-        // GET: /api/bookings/{id}
-        [HttpGet("{id}")]
-        public IActionResult GetBookingById(Guid id)
+        [HttpPut("{id}")]
+        public IActionResult UpdateBooking(int id, [FromBody] UpdateBookingDto dto)
         {
             var booking = _context.Bookings.FirstOrDefault(b => b.Id == id);
-            if (booking == null)
-                return NotFound("Booking not found.");
+            if (booking == null) return NotFound("Booking not found.");
 
-            return Ok(booking);
-        }
-
-        // PUT: /api/bookings/{id}
-        [HttpPut("{id}")]
-        public IActionResult UpdateBooking(Guid id, [FromBody] Booking updatedBooking)
-        {
-            var existingBooking = _context.Bookings.FirstOrDefault(b => b.Id == id);
-            if (existingBooking == null)
-                return NotFound("Booking not found.");
-
-            existingBooking.Description = updatedBooking.Description;
-            existingBooking.StartTime = updatedBooking.StartTime;
-            existingBooking.EndTime = updatedBooking.EndTime;
-            existingBooking.ComputerId = updatedBooking.ComputerId;
-            existingBooking.IsRoomBooking = updatedBooking.IsRoomBooking;
-            existingBooking.RoomBookingType = updatedBooking.RoomBookingType;
+            booking.Description = dto.Description;
+            booking.StartTime = dto.StartTime;
+            booking.EndTime = dto.EndTime;
+            booking.ComputerId = dto.ComputerId;
+            booking.IsRoomBooking = dto.IsRoomBooking;
+            booking.RoomBookingType = dto.RoomBookingType;
 
             _context.SaveChanges();
             return Ok("Booking updated successfully.");
         }
 
-        // DELETE: /api/bookings/{id}
         [HttpDelete("{id}")]
-        public IActionResult DeleteBooking(Guid id)
+        public IActionResult DeleteBooking(int id)
         {
             var booking = _context.Bookings.FirstOrDefault(b => b.Id == id);
-            if (booking == null)
-                return NotFound("Booking not found.");
+            if (booking == null) return NotFound("Booking not found.");
 
             _context.Bookings.Remove(booking);
             _context.SaveChanges();

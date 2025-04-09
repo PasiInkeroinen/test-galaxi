@@ -27,15 +27,22 @@ namespace GaLaXiBackend.Services
             emailMessage.Body = bodyBuilder.ToMessageBody();
 
             using var client = new SmtpClient();
+
+            int port = int.TryParse(_configuration["EmailSettings:Port"], out var parsedPort)
+                ? parsedPort
+                : 587;
+
             client.Connect(
                 _configuration["EmailSettings:SmtpServer"],
-                int.Parse(_configuration["EmailSettings:Port"]),
+                port,
                 MailKit.Security.SecureSocketOptions.StartTls
             );
+
             client.Authenticate(
                 _configuration["EmailSettings:SenderEmail"],
                 _configuration["EmailSettings:SenderPassword"]
             );
+
             client.Send(emailMessage);
             client.Disconnect(true);
         }
