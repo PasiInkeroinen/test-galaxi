@@ -1,32 +1,20 @@
-// src/context/AuthContext.tsx
-import { AuthContext } from "./AuthContextDefinition";
-import { useState, useEffect, ReactNode } from "react";
-import { getToken } from "../utils/jwtHelper";
-import { AuthState } from "./AuthContextDefinition";
+// src/context/AuthContext.ts
+import { createContext } from "react";
 
-interface AuthProviderProps {
-  children: ReactNode;
+export interface AuthState {
+  id: number;
+  email: string;
+  role: string;
+  token: string;
 }
 
-export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [auth, setAuth] = useState<AuthState | null>(null); // ✅ Correct typing
+export interface AuthContextType {
+  auth: AuthState | null;
+  setAuth: (auth: AuthState | null) => void;
+  login: (token: string) => void;
+  logout: () => void;
+}
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      setAuth(getToken(token));
-    }
-  }, []);
-
-  const login = (token: string) => {
-    const user = getToken(token);
-    setAuth(user);
-    localStorage.setItem("token", token);
-  };
-
-  return (
-    <AuthContext.Provider value={{ auth, setAuth, login }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined
+);

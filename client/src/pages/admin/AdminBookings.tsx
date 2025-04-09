@@ -1,11 +1,13 @@
-import { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+// src/pages/admin/AdminBookings.tsx
+
+import { useState, useEffect } from "react";
 import api from "@/api/axios";
 import { useAuth } from "@/context/useAuth";
 
+import { parseISO, format } from "date-fns";
+
 interface Booking {
   id: number;
-  userId: number;
   description: string;
   startTime: string;
   endTime: string;
@@ -22,173 +24,93 @@ interface Booking {
 export default function AdminBookings() {
   const { auth } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [pageSize] = useState(5);
-  const [userId, setUserId] = useState("");
-  const [computerId, setComputerId] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchBookings = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: Record<string, string | number> = { page, pageSize };
-      if (userId) params.userId = userId;
-      if (computerId) params.computerId = computerId;
-
-      const res = await api.get("/api/admin/bookings", { params });
-      setBookings(res.data.items);
-      setTotal(res.data.total);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load bookings");
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, userId, computerId]);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
-    if (auth?.role === "admin") {
-      fetchBookings();
-    }
-  }, [auth?.role, fetchBookings]);
+    if (auth?.role !== "admin") return;
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this booking?")) return;
-    try {
-      await api.delete(`/api/admin/bookings/${id}`);
-      fetchBookings();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete booking");
-    }
-  };
+    const fetchBookings = async () => {
+      try {
+        const response = await api.get("/api/admin/bookings", {
+          params: {
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+          },
+        });
+        setBookings(response.data);
+      } catch (error) {
+        console.error("Failed to fetch bookings", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const totalPages = Math.ceil(total / pageSize);
+    fetchBookings();
+  }, [auth?.role, startDate, endDate]);
 
   return (
     <div className="p-4 space-y-4">
-      <h2 className="text-2xl font-bold">All Bookings</h2>
+      <h2 className="text-xl font-bold">Admin View: All Bookings</h2>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 items-center">
+      <div className="flex gap-2 items-center">
+        <label>Start:</label>
         <input
-          type="number"
-          value={userId}
-          onChange={(e) => {
-            setUserId(e.target.value);
-            setPage(1);
-          }}
-          placeholder="Filter by User ID"
-          className="border rounded p-1"
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="border p-1 rounded"
         />
-
-        <select
-          value={computerId}
-          onChange={(e) => {
-            setComputerId(e.target.value);
-            setPage(1);
-          }}
-          className="border rounded p-1"
-        >
-          <option value="">All Computers</option>
-          {[1, 2, 3, 4, 5].map((id) => (
-            <option key={id} value={id}>
-              Computer #{id}
-            </option>
-          ))}
-        </select>
-
-        <button
-          onClick={() => {
-            setUserId("");
-            setComputerId("");
-            setPage(1);
-          }}
-          className="bg-gray-300 px-2 py-1 rounded hover:bg-gray-400"
-        >
-          Reset
-        </button>
+        <label>End:</label>
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="border p-1 rounded"
+        />
       </div>
 
-      {/* Booking List */}
-      {loading && <p>Loading...</p>}
-      {error && <p className="text-red-600">{error}</p>}
-      {!loading && bookings.length === 0 && <p>No bookings found.</p>}
-
-      {bookings.map((booking) => (
-        <div
-          key={booking.id}
-          className="border rounded-xl shadow p-4 bg-white space-y-1"
-        >
-          <div>
-            <span className="font-semibold">User:</span>{" "}
-            {booking.user?.username} ({booking.user?.email})
-          </div>
-          <div>
-            <span className="font-semibold">Description:</span>{" "}
-            {booking.description}
-          </div>
-          <div>
-            <span className="font-semibold">Start:</span>{" "}
-            {new Date(booking.startTime).toLocaleString()}
-          </div>
-          <div>
-            <span className="font-semibold">End:</span>{" "}
-            {new Date(booking.endTime).toLocaleString()}
-          </div>
-          {booking.computerId && (
-            <div>
-              <span className="font-semibold">Computer:</span> #
-              {booking.computerId}
-            </div>
-          )}
-          {booking.eventType && (
-            <div>
-              <span className="font-semibold">Event Type:</span>{" "}
-              {booking.eventType}
-            </div>
-          )}
-
-          <div className="flex gap-2 mt-2">
-            <button
-              onClick={() => handleDelete(booking.id)}
-              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-            >
-              Delete
-            </button>
-            <Link
-              to={`/me/bookings/edit/${booking.id}`}
-              className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
-            >
-              Edit
-            </Link>
-          </div>
-        </div>
-      ))}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex gap-4 items-center pt-4">
-          <button
-            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-            disabled={page === 1}
-            className="px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+      {loading ? (
+        <p>Loading bookings...</p>
+      ) : bookings.length === 0 ? (
+        <p>No bookings found.</p>
+      ) : (
+        bookings.map((booking) => (
+          <div
+            key={booking.id}
+            className="border rounded-xl shadow p-4 bg-white space-y-2"
           >
-            Previous
-          </button>
-          <span>
-            Page {page} / {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
-            disabled={page === totalPages}
-            className="px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
+            <p>
+              <span className="font-semibold">User:</span>{" "}
+              {booking.user.username} ({booking.user.email})
+            </p>
+            <p>
+              <span className="font-semibold">Description:</span>{" "}
+              {booking.description}
+            </p>
+            <p>
+              <span className="font-semibold">Start:</span>{" "}
+              {format(parseISO(booking.startTime), "Pp")}
+            </p>
+            <p>
+              <span className="font-semibold">End:</span>{" "}
+              {format(parseISO(booking.endTime), "Pp")}
+            </p>
+            {booking.computerId && (
+              <p>
+                <span className="font-semibold">Computer:</span>{" "}
+                {booking.computerId}
+              </p>
+            )}
+            {booking.eventType && (
+              <p>
+                <span className="font-semibold">Event Type:</span>{" "}
+                {booking.eventType}
+              </p>
+            )}
+          </div>
+        ))
       )}
     </div>
   );
