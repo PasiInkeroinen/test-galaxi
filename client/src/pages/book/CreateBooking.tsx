@@ -1,125 +1,155 @@
+// src/pages/book/CreateBooking.tsx
+
 import { useState } from "react";
 import api from "@/api/axios";
+import { useNavigate } from "react-router-dom";
+
+interface BookingRequest {
+  description: string;
+  startTime: Date;
+  endTime: Date;
+  computerId?: number;
+  eventType?: string;
+}
 
 export default function CreateBooking() {
   const [description, setDescription] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [computerId, setComputerId] = useState(1);
-  const [isRoomBooking, setIsRoomBooking] = useState(false);
-  const [roomBookingType, setRoomBookingType] = useState<
-    "private" | "public" | null
-  >(null);
-  const [message, setMessage] = useState("");
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [endTime, setEndTime] = useState<Date | null>(null);
+  const [computerId, setComputerId] = useState<number | null>(null);
+  const [eventType, setEventType] = useState<string>("");
+
+  const [availableComputers, setAvailableComputers] = useState<number[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const navigate = useNavigate();
+
+  const fetchAvailableComputers = async () => {
+    if (!startTime || !endTime) return;
+
+    if (startTime >= endTime) {
+      setError("Start time must be before end time.");
+      return;
+    }
+
+    try {
+      const response = await api.get(
+        `/api/computers/available?start=${startTime.toISOString()}&end=${endTime.toISOString()}`
+      );
+      setAvailableComputers(response.data);
+    } catch (err) {
+      console.error("Failed to fetch available computers", err);
+      setError("Could not load available computers.");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!startTime || !endTime || startTime >= endTime) {
+      setError("Please provide a valid date range.");
+      return;
+    }
+
+    const booking: BookingRequest = {
+      description,
+      startTime,
+      endTime,
+      computerId: computerId ?? undefined,
+      eventType: eventType || undefined,
+    };
+
     try {
-      await api.post("/api/book", {
-        description,
-        startTime,
-        endTime,
-        computerId,
-        isRoomBooking,
-        roomBookingType,
-        userId: 1, // 🧪 Temporary test user ID; replace with JWT later
-      });
-      setMessage("Booking created successfully!");
-    } catch (error) {
-      console.error(error);
-      setMessage("Booking failed");
+      await api.post("/api/me/bookings", booking);
+      navigate("/me/bookings");
+    } catch (err) {
+      console.error("Failed to create booking", err);
+      setError("Failed to create booking.");
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto mt-10 bg-xamk-light p-6 rounded shadow">
-      <h1 className="text-2xl font-bold text-xamk-blue mb-4">Create Booking</h1>
+    <div className="p-6 max-w-xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Create Booking</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="text"
-          placeholder="Description"
-          className="w-full p-2 border rounded bg-white"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          required
-        />
+        <label className="block">
+          Description:
+          <input
+            type="text"
+            className="mt-1 block w-full border rounded px-3 py-2"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+          />
+        </label>
 
-        <input
-          type="datetime-local"
-          className="w-full p-2 border rounded bg-white"
-          value={startTime}
-          onChange={(e) => setStartTime(e.target.value)}
-          required
-        />
+        <label className="block">
+          Start Time:
+          <input
+            type="datetime-local"
+            className="mt-1 block w-full border rounded px-3 py-2"
+            onChange={(e) => setStartTime(new Date(e.target.value))}
+            required
+          />
+        </label>
 
-        <input
-          type="datetime-local"
-          className="w-full p-2 border rounded bg-white"
-          value={endTime}
-          onChange={(e) => setEndTime(e.target.value)}
-          required
-        />
+        <label className="block">
+          End Time:
+          <input
+            type="datetime-local"
+            className="mt-1 block w-full border rounded px-3 py-2"
+            onChange={(e) => setEndTime(new Date(e.target.value))}
+            required
+          />
+        </label>
 
-        <div className="space-y-2">
-          <label className="block font-medium text-xamk-black">
-            Computer ID:
+        <button
+          type="button"
+          onClick={fetchAvailableComputers}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Check Available Computers
+        </button>
+
+        {availableComputers.length > 0 && (
+          <label className="block">
+            Select Computer:
+            <select
+              className="mt-1 block w-full border rounded px-3 py-2"
+              value={computerId ?? ""}
+              onChange={(e) =>
+                setComputerId(e.target.value ? parseInt(e.target.value) : null)
+              }
+            >
+              <option value="">None</option>
+              {availableComputers.map((id) => (
+                <option key={id} value={id}>
+                  Computer #{id}
+                </option>
+              ))}
+            </select>
           </label>
-          <select
-            value={computerId}
-            onChange={(e) => setComputerId(Number(e.target.value))}
-            className="w-full p-2 border rounded bg-white"
-          >
-            {[1, 2, 3, 4, 5].map((id) => (
-              <option key={id} value={id}>
-                Computer {id}
-              </option>
-            ))}
-          </select>
-        </div>
+        )}
 
-        <div className="space-y-2">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={isRoomBooking}
-              onChange={(e) => setIsRoomBooking(e.target.checked)}
-            />
-            <span className="text-xamk-black">Book entire gaming room</span>
-          </label>
+        <label className="block">
+          Event Type (optional):
+          <input
+            type="text"
+            className="mt-1 block w-full border rounded px-3 py-2"
+            value={eventType}
+            onChange={(e) => setEventType(e.target.value)}
+          />
+        </label>
 
-          {isRoomBooking && (
-            <div>
-              <label className="block font-medium text-xamk-black">
-                Room Booking Type:
-              </label>
-              <select
-                className="w-full p-2 border rounded bg-white"
-                value={roomBookingType ?? ""}
-                onChange={(e) =>
-                  setRoomBookingType(
-                    e.target.value === ""
-                      ? null
-                      : (e.target.value as "private" | "public")
-                  )
-                }
-              >
-                <option value="">Select type</option>
-                <option value="private">Private</option>
-                <option value="public">Public</option>
-              </select>
-            </div>
-          )}
-        </div>
+        {error && <div className="text-red-500">{error}</div>}
 
         <button
           type="submit"
-          className="w-full bg-xamk-blue text-white p-2 rounded font-semibold"
+          className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
         >
           Submit Booking
         </button>
       </form>
-
-      {message && <p className="mt-4 text-xamk-black">{message}</p>}
     </div>
   );
 }

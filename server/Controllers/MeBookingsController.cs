@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GaLaXiBackend.Data;
+using GaLaXiBackend.Models;
 using GaLaXiBackend.Models.Dtos;
 
 namespace GaLaXiBackend.Controllers
@@ -8,11 +9,11 @@ namespace GaLaXiBackend.Controllers
     [Route("api/me/bookings")]
     [ApiController]
     //[Authorize]
-    public class MeBookingController : ControllerBase
+    public class MeBookingsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
 
-        public MeBookingController(ApplicationDbContext context)
+        public MeBookingsController(ApplicationDbContext context)
         {
             _context = context;
         }
@@ -37,6 +38,28 @@ namespace GaLaXiBackend.Controllers
                 .ToList();
 
             return Ok(bookings);
+        }
+
+        [HttpPost]
+        public IActionResult CreateMyBooking([FromBody] CreateBookingDto dto)
+        {
+            var userId = int.Parse(User.Identity?.Name ?? "0");
+
+            var booking = new Booking
+            {
+                Description = dto.Description,
+                StartTime = dto.StartTime,
+                EndTime = dto.EndTime,
+                ComputerId = dto.ComputerId,
+                IsRoomBooking = dto.IsRoomBooking,
+                RoomBookingType = dto.RoomBookingType,
+                UserId = userId
+            };
+
+            _context.Bookings.Add(booking);
+            _context.SaveChanges();
+
+            return Ok(new { Message = "Booking created successfully", BookingId = booking.Id });
         }
 
         [HttpPut("{id}")]

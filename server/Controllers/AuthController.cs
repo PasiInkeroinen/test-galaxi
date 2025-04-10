@@ -5,12 +5,10 @@ using System.Security.Claims;
 using System.Text;
 using GaLaXiBackend.Data;
 using GaLaXiBackend.Models;
+using GaLaXiBackend.Models.Dtos;
 
 namespace GaLaXiBackend.Controllers
 {
-    /// <summary>
-    /// Controller for user authentication and JWT token generation.
-    /// </summary>
     [Route("api/auth")]
     [ApiController]
     public class AuthController : ControllerBase
@@ -24,13 +22,8 @@ namespace GaLaXiBackend.Controllers
             _configuration = configuration;
         }
 
-        /// <summary>
-        /// Authenticates a user and generates a JWT token.
-        /// </summary>
-        /// <param name="loginRequest">User login details</param>
-        /// <returns>JWT token if authentication is successful</returns>
         [HttpPost("login")]
-        public IActionResult Login([FromBody] User loginRequest)
+        public IActionResult Login([FromBody] LoginRequestDto loginRequest)
         {
             if (loginRequest == null || string.IsNullOrEmpty(loginRequest.Email))
             {
@@ -40,17 +33,15 @@ namespace GaLaXiBackend.Controllers
             var user = _context.Users.FirstOrDefault(u => u.Email == loginRequest.Email);
             if (user == null)
             {
-                return Unauthorized("Invalid email or password.");
+                return Unauthorized("Invalid email.");
             }
 
-            // Ensure JWT key is valid
             var jwtKey = _configuration["Jwt:Key"];
             if (string.IsNullOrEmpty(jwtKey))
             {
                 throw new Exception("JWT Key is missing from configuration.");
             }
 
-            // Generate JWT token
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.UTF8.GetBytes(jwtKey);
 
@@ -70,14 +61,18 @@ namespace GaLaXiBackend.Controllers
             var token = tokenHandler.CreateToken(tokenDescriptor);
             var tokenString = tokenHandler.WriteToken(token);
 
-            return Ok(new { Token = tokenString, Role = user.Role });
+            return Ok(new
+            {
+                token = tokenString,
+                user = new
+                {
+                    user.Id,
+                    user.Email,
+                    user.Role
+                }
+            });
         }
 
-        /// <summary>
-        /// Registers a new user in the system.
-        /// </summary>
-        /// <param name="user">User registration details</param>
-        /// <returns>Success message or error</returns>
         [HttpPost("register")]
         public IActionResult Register([FromBody] User user)
         {
@@ -86,7 +81,6 @@ namespace GaLaXiBackend.Controllers
                 return BadRequest("Email is already in use.");
             }
 
-            // Default role is "user", unless specified otherwise
             user.Role = user.Role ?? "user";
 
             _context.Users.Add(user);

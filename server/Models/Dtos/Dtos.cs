@@ -35,7 +35,6 @@
         public bool IsRoomBooking { get; set; }
         public string? RoomBookingType { get; set; }
 
-        public int UserId { get; set; }  // Added
     }
 
     public class UpdateBookingDto
@@ -46,6 +45,11 @@
         public int? ComputerId { get; set; }
         public bool IsRoomBooking { get; set; }
         public string? RoomBookingType { get; set; }
+    }
+
+    public class LoginRequestDto
+    {
+        public string Email { get; set; } = string.Empty;
     }
 
     public class UserWithBookingsDto
